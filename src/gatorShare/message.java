@@ -2,7 +2,7 @@ package gatorShare;
 
 import java.io.Serializable;
 
-public class message implements Serializable {
+public class Message implements Serializable {
 
     enum messageType {
         CHOKE(0),
@@ -12,24 +12,36 @@ public class message implements Serializable {
         HAVE(4),
         BITFIELD(5),
         REQUEST(6),
-        PIECE(7)
+        PIECE(7);
+
+        private int value;
+        
+        private messageType(int value) {
+            this.value = value;
+        }
     }
+
 
     private int length;
     private messageType type;
-    // Need to dfine payload
-    // private payload payload;
+    private Payload messagePayload;
 
-    public message(messageType type) {
+    public Message(messageType type) {
         this.type = type;
-        // Set length by checking payload
-        // this.length = length;
+        if (messagePayload == null) {
+            this.length = 0;
+        } else {
+            this.length = messagePayload.getPayloadLength();
+        }
     
     }
 
-    public int getMessageLength(int length) {
-        return this.msgLength;
+    public int getMessageLength() {
+        return this.length;
     }
 
+    public messageType getMessageType() {
+        return this.type;
+    }
 
 }
