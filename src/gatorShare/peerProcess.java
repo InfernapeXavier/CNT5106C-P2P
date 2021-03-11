@@ -4,7 +4,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class peerProcess {
+
+public class peerProcess extends Thread{
 
     private final int ID;
     private Info info;
@@ -62,7 +63,7 @@ public class peerProcess {
                 dir.mkdir();
             }
             BufferedWriter myLog = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/Peer_" + ID + "/peer_" + ID + ".log"));
-            new log(myLog, ID, peer.ID);
+            log.connectsTo(ID, peer.ID, myLog);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -81,9 +82,9 @@ public class peerProcess {
                 + "\nListening to port " + peer.port + "\nDownload status is " + peer.downloadStatus);
 
         //Handshake part or something, still trying to figure it out
-        client.initializeServer();
+        //client.initializeServer();
         //client.initialize(client.host, client.port);
-        peer.initializePeer(peer.host, peer.port);
+        //peer.initializePeer(peer.host, peer.port);
         client.establishConnection(peer);
     }
 }
