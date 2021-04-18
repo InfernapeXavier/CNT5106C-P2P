@@ -1,90 +1,103 @@
 package gatorShare;
 
-import java.io.*;
-import java.net.*;
-import java.util.*;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+public class peerProcess implements Runnable{
 
 
-public class peerProcess extends Thread{
-
-    private final int ID;
+    private int myID;
     private Info info;
-    private final int port;
-    private final String host;
-    private final boolean downloadStatus;
-    private Handshake handshake;
-    private Socket socket;
-    private static File dir;
+    private MyLogger myLogger;
+    private Bitfield bitfield;
+    private int numberOfNeighbors;
+    private Neighbors[] neighbors;
+    private Manager manager;
 
 
-    public peerProcess (int ID) throws  FileNotFoundException {
-        this.ID = ID;
-        this.info = new Info("src/Common.cfg", "src/PeerInfo.cfg");
-        this.host = info.getHost(ID);
-        this.port = info.getPort(ID);
-        this.downloadStatus= info.getDownloadComplete(ID);
+    public peerProcess(int ID) throws IOException {
+
+        this.myID = myID;
+        this.info = new Info("Common.cfg", "PeerInfo.cfg");
+        this.myLogger = new MyLogger(myID);
+        this.bitfield = new Bitfield(info.getPieces());
+        this.numberOfNeighbors = info.getNeighbors();
+        neighbors = new Neighbors[numberOfNeighbors];
+        this.manager = new Manager(this.myID, this.info);
+    }
+
+    //WIP
+    public void initPeer(Neighbors neighbors) {
+        Socket socket = neighbors.getUpload();
+        //Handshake handshake = new Handshake();
+        //handshake.setID(myID);
+        //handshake.send(socket);
+        //handshake.read(socket);
+
+
+
+    }
+    //WIP
+    public void initServer(int index, ServerSocket serverDownload, ServerSocket serverUpload, ServerSocket serverHave) throws IOException {
+        Socket downloadSocket = serverDownload.accept();
+        Socket uploadSocket = serverUpload.accept();
+        Socket haveSocket = serverHave.accept();
+
+        //Handshake handshake = new Handshake();
+    }
+
+    //WIP
+    public void start() {
 
     }
 
-    public void initializeServer() {
-        new initService(port);
-    }
-
-    public void initializePeer(String host, int port)  {
+    public void run() {
         try {
-            new initPeer(host, port);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    //I'm not sure if the handshake message should contain the ID of the receiver or the ID of the sender.
-    //It would probably make sense if it were the receiver's ID, as we could then easily compare if we got the
-    //right one, but I'm hesitant about this.
-    public void shakehands(peerProcess peer) {
-        String handshakeMessage = "P2PFILESHARINGPROJ0000000000" + peer.ID;
-        System.out.println(handshakeMessage);
-        this.handshake = new Handshake(handshakeMessage, ID);
-    }
-
-    public void establishConnection(peerProcess peer) {
-        try {
-            shakehands(peer);
-            logger(peer);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void logger(peerProcess peer) {
-        try {
-            dir = new File("Peer_" + ID);
-            if (!dir.exists()) {
-                dir.mkdir();
+            int index = -1;
+            for (int i = 0; i < info.getNeighbors(); i++) {
+                index++;
+                if (myID == info.getIDs().get(i)) {
+                    if (info.getDownloadCompleteStatus().get(i)) {
+                        bitfield.activateAll();
+                    }
+                    break;
+                }
+                Socket download = new Socket(info.getHosts().get(i), info.getPort(i));
+                Socket upload = new Socket(info.getHosts().get(i), info.getPort(i) + 1);
+                Socket have = new Socket(info.getHosts().get(i), info.getPort(i) + 2);
+                myLogger.connectsTo(info.getIDs().get(i));
+                neighbors[i] = new Neighbors(info.getIDs().get(i), info.getPieces(), upload, download, have);
+                initPeer(neighbors[i]);
             }
-            BufferedWriter myLog = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/Peer_" + ID + "/peer_" + ID + ".log"));
-            log.connectsTo(ID, peer.ID, myLog);
+            ServerSocket serverDownload = null;
+            ServerSocket serverUpload = null;
+            ServerSocket serverHave = null;
+
+            if(info.getNeighbors()-1 != index) {
+                serverDownload = new ServerSocket(info.getPort(index));
+                serverUpload = new ServerSocket(info.getPort(index) + 1);
+                serverHave  = new ServerSocket(info.getPort(index) + 2);
+
+                for (int i = index; i < info.getNeighbors() - 1; i++) {
+                    initServer(i, serverDownload, serverUpload, serverHave);
+                }
+            }
+
+            /*
+            TO-DO: handle choking/unchoking, upload process, and whatnot
+             */
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
 
     public static void main(String[] args) throws IOException {
-
-        //Testing
-        peerProcess client = new peerProcess(Integer.parseInt(args[0]));
-        System.out.println("[TEST]: This peer ID is " + client.ID +".\nLocated at " + client.host
-                + "\nListening to port " + client.port + "\nDownload status is " + client.downloadStatus);
-
-        //More testing
-        peerProcess peer = new peerProcess(1002);
-        System.out.println("[TEST]: This peer ID is " + peer.ID +".\nLocated at " + peer.host
-                + "\nListening to port " + peer.port + "\nDownload status is " + peer.downloadStatus);
-
-        //Handshake part or something, still trying to figure it out
-        //client.initializeServer();
-        //client.initialize(client.host, client.port);
-        //peer.initializePeer(peer.host, peer.port);
-        client.establishConnection(peer);
+        peerProcess peer = new peerProcess(Integer.parseInt(args[0]));
+        Thread thread = new Thread(peer);
+        thread.start();
     }
 }
