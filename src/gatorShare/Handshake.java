@@ -9,7 +9,8 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 
-public class Handshake {
+
+public class Handshake implements Serializable {
 
     private int ID;
     private Socket socket = null;
