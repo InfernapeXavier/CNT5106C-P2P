@@ -18,7 +18,7 @@ public class MyLogger {
 
 
     public MyLogger (int myID) throws IOException {
-        this.myID= myID;
+        this.myID = myID;
         log = Logger.getLogger("Peer_" + myID);
         logger = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/Peer_" + myID + "/peer_" + myID + ".log"));
     }

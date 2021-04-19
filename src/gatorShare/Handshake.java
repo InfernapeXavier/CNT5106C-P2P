@@ -3,8 +3,10 @@ package gatorShare;
 import java.io.IOException;
 import java.net.*;
 import java.util.Scanner;
+import java.io.Serializable;
 
-public class Handshake {
+
+public class Handshake implements Serializable {
 
     private int ID;
     private Socket socket = null;
