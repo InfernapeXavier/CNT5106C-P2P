@@ -1,6 +1,7 @@
 package gatorShare;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -15,11 +16,17 @@ public class MyLogger {
     private static BufferedWriter logger;
     private static int myID;
     private Logger log;
+    private File dir;
 
 
     public MyLogger (int myID) throws IOException {
         this.myID = myID;
-        log = Logger.getLogger("Peer_" + myID);
+
+        dir = new File("Peer_" + myID);
+        if(!dir.exists()){
+            dir.mkdirs();
+        }
+        //log = Logger.getLogger("Peer_" + myID);
         logger = new BufferedWriter(new FileWriter(System.getProperty("user.dir") + "/Peer_" + myID + "/peer_" + myID + ".log"));
     }
 
@@ -181,7 +188,7 @@ public class MyLogger {
         }
     }
 
-    public static void receiveNotIntereset (int peerID) {
+    public static void receiveNotInterested (int peerID) {
         date = new Date();
         StringBuilder log = new StringBuilder();
         log.append(dateFormat.format(date));

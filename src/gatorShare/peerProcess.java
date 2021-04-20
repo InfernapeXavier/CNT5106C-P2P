@@ -20,7 +20,7 @@ public class peerProcess implements Runnable{
     public peerProcess(int ID) throws IOException {
 
         this.myID = myID;
-        this.info = new Info("Common.cfg", "PeerInfo.cfg");
+        this.info = new Info("src/Common.cfg", "src/PeerInfo.cfg");
         this.myLogger = new MyLogger(myID);
         this.bitfield = new Bitfield(info.getPieces());
         this.numberOfNeighbors = info.getNeighbors();
@@ -34,8 +34,11 @@ public class peerProcess implements Runnable{
         handshake.SendHandShake(socket.getOutputStream());
         handshake.ReceiveHandShake(socket.getInputStream());
         assert (myID == neighbors.getID()) : "[NOTICE] Handshake failed";
-        myLogger.connectsTo(neighbors.getID());
-        myLogger.connectedFrom(neighbors.getID());
+        if (myID == neighbors.getID()) {
+            myLogger.connectsTo(neighbors.getID());
+            myLogger.connectedFrom(neighbors.getID());
+        }
+
 
         byte[] payload = neighbors.getBitfield().asBytes();
         Message bitfieldMessage = new Message(Message.messageType.BITFIELD, payload);
@@ -60,11 +63,16 @@ public class peerProcess implements Runnable{
     }
     //WIP
     public void initServer(int index, ServerSocket serverDownload, ServerSocket serverUpload, ServerSocket serverHave) throws IOException {
+        System.out.println("Does this ever happen yet?");
         Socket downloadSocket = serverDownload.accept();
         Socket uploadSocket = serverUpload.accept();
         Socket haveSocket = serverHave.accept();
+        Handshake handshake = new Handshake(0, null);
+        handshake.ReceiveHandShake(downloadSocket.getInputStream());
+        neighbors[index] = new Neighbors(handshake.getID(), info.getPieces(),uploadSocket, downloadSocket, haveSocket);
+        handshake = new Handshake(myID, "P2PFILESHARINGPROJECT");
 
-        //Handshake handshake = new Handshake();
+
     }
 
     //WIP
@@ -74,34 +82,54 @@ public class peerProcess implements Runnable{
 
     public void run() {
         try {
-            int index = -1;
+            int index = 0;
+
+
             for (int i = 0; i < info.getNeighbors(); i++) {
-                index++;
-                if (myID == info.getIDs().get(i)) {
-                    assert (info.getDownloadCompleteStatus().get(i));
-                    bitfield.activateAll();
+
+                if (myID != info.getIDs().get(i)) {
+                    if (info.getDownloadCompleteStatus().get(i)) {
+                        bitfield.activateAll();
+                        //System.out.println("Is this happening?");
+                    }
+                    break;
                 }
+
+
+                System.out.println(info.getHosts().get(i));
+                System.out.println(info.getPort(i));
                 Socket download = new Socket(info.getHosts().get(i), info.getPort(i));
                 Socket upload = new Socket(info.getHosts().get(i), info.getPort(i) + 1);
                 Socket have = new Socket(info.getHosts().get(i), info.getPort(i) + 2);
                 neighbors[i] = new Neighbors(info.getIDs().get(i), info.getPieces(), upload, download, have);
                 initPeer(neighbors[i]);
+                index++;
             }
 
-            assert (index != info.getNeighbors()-1);
-            ServerSocket serverDownload = new ServerSocket(info.getPort(index));
-            ServerSocket serverUpload = new ServerSocket(info.getPort(index) + 1);
-            ServerSocket serverHave  = new ServerSocket(info.getPort(index) + 2);
-            for (int i = index; i < info.getNeighbors() - 1; i++) {
-                initServer(i, serverDownload, serverUpload, serverHave);
+            if (index != info.getPeers()-1) {
+                ServerSocket serverDownload = new ServerSocket(info.getPort(index));
+                ServerSocket serverUpload = new ServerSocket(info.getPort(index) + 1);
+                ServerSocket serverHave  = new ServerSocket(info.getPort(index) + 2);
+                System.out.println(info.getPeers() - 1);
+                for (int i = index; i < info.getPeers() - 1; i++) {
+                    System.out.println("HEY, LISTEN");
+                    System.out.println(i);
+                    System.out.println(serverDownload);
+                    System.out.println(serverUpload);
+                    System.out.println(serverHave);
+                    initServer(i, serverDownload, serverUpload, serverHave);
+                    System.out.println("This works, right?");
+                }
+
             }
 
-            } catch (UnknownHostException unknownHostException) {
-            unknownHostException.printStackTrace();
+            System.out.println("Does this ever trigger?");
+
+
 
 
             /*
-            TO-DO: handle choking/unchoking, upload process, and whatnot
+            TO-DO: handle choking/unchoking, upload/download process, and finishing up
              */
 
 
@@ -113,7 +141,10 @@ public class peerProcess implements Runnable{
 
     public static void main(String[] args) throws IOException {
         peerProcess peer = new peerProcess(Integer.parseInt(args[0]));
+        peerProcess testPeer = new peerProcess((1002));
         Thread thread = new Thread(peer);
+        Thread testThread = new Thread(testPeer);
         thread.start();
+        testThread.start();
     }
 }
