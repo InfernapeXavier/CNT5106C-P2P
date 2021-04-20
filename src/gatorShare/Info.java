@@ -15,6 +15,7 @@ public class Info {
     private final ArrayList<String> host;
     private final ArrayList<Integer> port;
     private final ArrayList<Boolean> downloadComplete;
+    private int peers;
 
 
     public Info(String common, String peerInfo) throws FileNotFoundException {
@@ -44,7 +45,7 @@ public class Info {
         this.pieceSize = Integer.parseInt(split5[1].trim());
 
         in.close();
-
+        peers = 0;
         Scanner inPeer = new Scanner(new FileReader(peerInfo));
         IDs = new ArrayList<Integer>();
         host = new ArrayList<String>();
@@ -62,11 +63,16 @@ public class Info {
                 this.downloadComplete.add(true);
             }
         }
+        peers += 1;
         inPeer.close();
     }
 
     public int getNeighbors() {
         return numberOfNeighbors;
+    }
+
+    public int getPeers() {
+        return peers;
     }
 
     public int getUnchokingInterval() {
@@ -106,7 +112,7 @@ public class Info {
     }
 
     public int getPort(int ID) {
-        return port.get(ID-1001);
+        return port.get(ID);
     }
 
     public ArrayList<Integer> getPorts() {

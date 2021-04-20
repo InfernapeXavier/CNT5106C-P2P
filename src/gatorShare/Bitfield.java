@@ -6,31 +6,55 @@ public class Bitfield {
     private int downloaded;
     private boolean[] bitfield;
     private boolean finished;
+    private int bytes;
 
-    public  Bitfield(int pieces) {
+    public Bitfield(int pieces) {
         this.pieces = pieces;
         downloaded = 0;
         bitfield = new boolean[pieces];
-        for (int i = 0; i < pieces; i++) {
-            bitfield[i] = false;
-        }
-        finished = false;
+        deactivateAll();
     }
 
     public synchronized void setBit(byte[] bytes) {
         downloaded = 0;
         for (int i = 0; i < pieces; i++) {
-            int currentByte = i/8;
-            int currentBit = i%8;
-            if (((currentBit >> 1) & bytes[currentByte]) != 0) {
+            if (((i%8 >> 1) & bytes[i/8]) != 0) {
                 downloaded++;
                 bitfield[i] = true;
             } else {
                 bitfield[i] = false;
             }
-            if (pieces == downloaded) {
-                finished = true;
+        }
+    }
+
+    public synchronized void initializeBytes(byte[] bytes, int number) {
+        for (int i = 0; i < number; i++) {
+            bytes[number] = 0;
+        }
+    }
+
+    public synchronized byte[] asBytes() {
+        switch (pieces%8) {
+            case 0:
+                bytes = pieces/8;
+            default:
+                bytes = pieces/8 + 1;
+        }
+        byte[] asBytes = new byte[bytes];
+        initializeBytes(asBytes, bytes);
+        for (int i = 0; i < bytes; i++) {
+            if (bitfield[i]) {
+                asBytes[i/8] = (byte)((i%8 >> 1) | asBytes[i/8]);
+            } else {
+                asBytes[i/8] = (byte)~((i%8 >> 1) & asBytes[i/8]);
             }
+        }
+        return asBytes;
+    }
+
+    public synchronized void checkFinished() {
+        if (pieces == downloaded) {
+            setFinished();
         }
     }
 
@@ -49,9 +73,18 @@ public class Bitfield {
             bitfield[bit] = true;
             downloaded++;
             if (downloaded == pieces) {
-                finished = true;
+                setFinished();
             }
         }
+    }
+
+    public synchronized  void deactivateAll() {
+        for (int i = 0; i < pieces; i++) {
+            if (bitfield[i]) { //== true
+                bitfield[i] = false;
+            }
+        }
+        finished = false;
     }
 
     public synchronized void activateAll() {
@@ -59,8 +92,10 @@ public class Bitfield {
             bitfield[i] = true;
             downloaded++;
         }
-        finished = true;
+        setFinished();
     }
 
     public synchronized boolean finished() {return finished;}
+
+    public synchronized void setFinished() {finished = true;}
 }
