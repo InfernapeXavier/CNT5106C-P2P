@@ -20,7 +20,7 @@ public class peerProcess implements Runnable{
     public peerProcess(int ID) throws IOException {
 
         this.myID = myID;
-        this.info = new Info("src/Common.cfg", "src/PeerInfo.cfg");
+        this.info = new Info("Common.cfg", "PeerInfo.cfg");
         this.myLogger = new MyLogger(myID);
         this.bitfield = new Bitfield(info.getPieces());
         this.numberOfNeighbors = info.getNeighbors();
