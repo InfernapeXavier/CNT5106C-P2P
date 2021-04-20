@@ -3,6 +3,7 @@ package gatorShare;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 public class peerProcess implements Runnable{
 
@@ -27,15 +28,34 @@ public class peerProcess implements Runnable{
         this.manager = new Manager(this.myID, this.info);
     }
 
-    //WIP
-    public void initPeer(Neighbors neighbors) {
+    public void initPeer(Neighbors neighbors) throws Exception {
         Socket socket = neighbors.getUpload();
-        //Handshake handshake = new Handshake();
-        //handshake.setID(myID);
-        //handshake.send(socket);
-        //handshake.read(socket);
+        Handshake handshake = new Handshake(myID,"P2PFILESHARINGPROJECT");
+        handshake.SendHandShake(socket.getOutputStream());
+        handshake.ReceiveHandShake(socket.getInputStream());
+        assert (myID == neighbors.getID()) : "[NOTICE] Handshake failed";
+        myLogger.connectsTo(neighbors.getID());
+        myLogger.connectedFrom(neighbors.getID());
 
+        byte[] payload = neighbors.getBitfield().asBytes();
+        Message bitfieldMessage = new Message(Message.messageType.BITFIELD, payload);
+        bitfieldMessage.send(socket.getOutputStream());
+        bitfieldMessage.receive(socket.getInputStream());
+        Bitfield receivedBitfield = new Bitfield(info.getPieces());
+        receivedBitfield.setBit(bitfieldMessage.getPayload());
+        neighbors.setBitfield(receivedBitfield);
 
+        Message interestMessage = new Message(Message.messageType.INTERESTED, null);
+        if (bitfield.interested(receivedBitfield) == -1) {
+            interestMessage.setType(Message.messageType.NOT_INTERESTED);
+        }
+        interestMessage.send(socket.getOutputStream());
+        interestMessage.receive((socket.getInputStream()));
+        if (interestMessage.getMessageType() == Message.messageType.INTERESTED) {
+            myLogger.receiveInterested(neighbors.getID());
+        } else {
+            myLogger.receiveNotInterested(neighbors.getID());
+        }
 
     }
     //WIP
@@ -58,31 +78,27 @@ public class peerProcess implements Runnable{
             for (int i = 0; i < info.getNeighbors(); i++) {
                 index++;
                 if (myID == info.getIDs().get(i)) {
-                    if (info.getDownloadCompleteStatus().get(i)) {
-                        bitfield.activateAll();
-                    }
-                    break;
+                    assert (info.getDownloadCompleteStatus().get(i));
+                    bitfield.activateAll();
                 }
                 Socket download = new Socket(info.getHosts().get(i), info.getPort(i));
                 Socket upload = new Socket(info.getHosts().get(i), info.getPort(i) + 1);
                 Socket have = new Socket(info.getHosts().get(i), info.getPort(i) + 2);
-                myLogger.connectsTo(info.getIDs().get(i));
                 neighbors[i] = new Neighbors(info.getIDs().get(i), info.getPieces(), upload, download, have);
                 initPeer(neighbors[i]);
             }
-            ServerSocket serverDownload = null;
-            ServerSocket serverUpload = null;
-            ServerSocket serverHave = null;
 
-            if(info.getNeighbors()-1 != index) {
-                serverDownload = new ServerSocket(info.getPort(index));
-                serverUpload = new ServerSocket(info.getPort(index) + 1);
-                serverHave  = new ServerSocket(info.getPort(index) + 2);
-
-                for (int i = index; i < info.getNeighbors() - 1; i++) {
-                    initServer(i, serverDownload, serverUpload, serverHave);
-                }
+            assert (index != info.getNeighbors()-1);
+            ServerSocket serverDownload = new ServerSocket(info.getPort(index));
+            ServerSocket serverUpload = new ServerSocket(info.getPort(index) + 1);
+            ServerSocket serverHave  = new ServerSocket(info.getPort(index) + 2);
+            for (int i = index; i < info.getNeighbors() - 1; i++) {
+                initServer(i, serverDownload, serverUpload, serverHave);
             }
+
+            } catch (UnknownHostException unknownHostException) {
+            unknownHostException.printStackTrace();
+
 
             /*
             TO-DO: handle choking/unchoking, upload process, and whatnot
