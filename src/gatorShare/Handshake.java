@@ -15,7 +15,7 @@ public class Handshake implements Serializable {
     private int ID;
     private Socket socket = null;
     private static final long serialVersionUID = -1482860868859618509L;
-	private static final String Header = "P2PFILESHARINGPROJECT";
+	private static final String Header = "P2PFILESHARINGPROJ";
 	private final String peerMsgHeader;
     
     public Handshake(String message, int myID, String header) {
