@@ -18,7 +18,7 @@ public class Bitfield {
     public synchronized void setBits(byte[] bytes) {
         downloaded = 0;
         for (int i = 0; i < pieces; i++) {
-            if (((i%8 >> 1) & bytes[i/8]) != 0) {
+            if (((1 << i%8) & bytes[i/8]) != 0) {
                 downloaded++;
                 bitfield[i] = true;
             } else {
@@ -43,9 +43,9 @@ public class Bitfield {
         initializeBytes(asBytes, bytes);
         for (int i = 0; i < bytes; i++) {
             if (bitfield[i]) {
-                asBytes[i/8] = (byte)((i%8 >> 1) | asBytes[i/8]);
+                asBytes[i/8] = (byte)((1 << i%8) | asBytes[i/8]);
             } else {
-                asBytes[i/8] = (byte)~((i%8 >> 1) & asBytes[i/8]);
+                asBytes[i/8] = (byte)~((1 << i%8) & asBytes[i/8]);
             }
         }
         return asBytes;

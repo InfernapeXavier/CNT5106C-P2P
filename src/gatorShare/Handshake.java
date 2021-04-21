@@ -15,14 +15,13 @@ public class Handshake implements Serializable {
     private int ID;
     private Socket socket = null;
     private static final long serialVersionUID = -1482860868859618509L;
-	private static final String Header = "P2PFILESHARINGPROJ";
-	private final String peerMsgHeader;
+	private static String header = "P2PFILESHARINGPROJ";
+	private final String peerMsgHeader = null;
     
-    public Handshake(String message, int myID, String header) {
+    public Handshake(int myID, String header) {
     	this.ID = myID;
     	this.header = header;
-    	System.out.println(message.substring(28));
-        System.out.println(myID);
+
     }
     
      /**
@@ -33,7 +32,7 @@ public class Handshake implements Serializable {
 	}
     
     /**
-	 * @param ID
+	 * @param //ID
 	 *            the ID to set
 	 */
 	public void setID(int peerID) {
@@ -51,7 +50,7 @@ public class Handshake implements Serializable {
 	 * @return the header
 	 */
 	public static String getHeader() {
-		return Header;
+		return header;
 	}
     
     	@Override
@@ -71,8 +70,8 @@ public class Handshake implements Serializable {
 	public int ReceiveHandShake(InputStream in) throws IOException {
 		try {
 			ObjectInputStream ipStream = new ObjectInputStream(in);
-			HandShake Response = (HandShake) ipStream.readObject();
-			return Response != null ? Response.peerID : -1;
+			Handshake Response = (Handshake) ipStream.readObject();
+			return Response != null ? Response.ID : -1;
 		} catch (ClassNotFoundException e) {
 			System.out.println(e);
 		}

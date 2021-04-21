@@ -81,8 +81,35 @@ public class peerProcess implements Runnable{
         handshake.ReceiveHandShake(downloadSocket.getInputStream());
         neighbors[index] = new Neighbors(handshake.getID(), info.getPieces(),uploadSocket, downloadSocket, haveSocket);
         handshake = new Handshake(myID, "P2PFILESHARINGPROJECT");
+        handshake.SendHandShake(downloadSocket.getOutputStream());
+        assert (myID == neighbors[index].getID()) : "[NOTICE] Handshake failed";
+        if (myID == neighbors[index].getID()) {
+            myLogger.connectsTo(neighbors[index].getID());
+            myLogger.connectedFrom(neighbors[index].getID());
+        }
+
+        Message bitfieldMessage = new Message(Message.messageType.BITFIELD, null);
+        bitfieldMessage.receive(downloadSocket.getInputStream());
+        Bitfield receivedBitfield = new Bitfield(info.getPieces());
+        byte[] payload = neighbors[index].getBitfield().asBytes();
+        receivedBitfield.setBits(bitfieldMessage.getPayload());
+        neighbors[index].setBitfield(receivedBitfield);
+
+        bitfieldMessage = new Message(Message.messageType.BITFIELD, bitfield.asBytes());
+        bitfieldMessage.send(downloadSocket.getOutputStream());
 
 
+        Message interestMessage = new Message(Message.messageType.INTERESTED, null);
+        interestMessage.receive((downloadSocket.getInputStream()));
+        if (interestMessage.getMessageType() == Message.messageType.INTERESTED) {
+            myLogger.receiveInterested(neighbors[index].getID());
+        } else {
+            myLogger.receiveNotInterested(neighbors[index].getID());
+        }
+        if (bitfield.interested(receivedBitfield) == -1) {
+            interestMessage.setType(Message.messageType.NOT_INTERESTED);
+        }
+        interestMessage.send(downloadSocket.getOutputStream());
     }
 
     //WIP
@@ -105,9 +132,6 @@ public class peerProcess implements Runnable{
                     break;
                 }
 
-
-                System.out.println(info.getHosts().get(i));
-                System.out.println(info.getPort(i));
                 Socket download = new Socket(info.getHosts().get(i), info.getPort(i));
                 Socket upload = new Socket(info.getHosts().get(i), info.getPort(i) + 1);
                 Socket have = new Socket(info.getHosts().get(i), info.getPort(i) + 2);
@@ -122,13 +146,7 @@ public class peerProcess implements Runnable{
                 ServerSocket serverHave  = new ServerSocket(info.getPort(index) + 2);
                 System.out.println(info.getPeers() - 1);
                 for (int i = index; i < info.getPeers() - 1; i++) {
-                    System.out.println("HEY, LISTEN");
-                    System.out.println(i);
-                    System.out.println(serverDownload);
-                    System.out.println(serverUpload);
-                    System.out.println(serverHave);
                     initServer(i, serverDownload, serverUpload, serverHave);
-                    System.out.println("This works, right?");
                 }
 
             }
@@ -146,7 +164,7 @@ public class peerProcess implements Runnable{
             e.printStackTrace();
         }
     }
-
+/*
     public void checkMessage(Message message) throws IOException {
 
         switch (message.getMessageType()) {
@@ -172,15 +190,17 @@ public class peerProcess implements Runnable{
 
     }
 
+ */
+
     public void handleInterested(Message message) throws  IOException {
 
         // Set correct peerID
-        interestInPieces.put(peerID, Boolean.TRUE);
+        interestInPieces.put(myID, Boolean.TRUE);
     }
     public void handleNotInterested(Message message) throws  IOException {
 
         // Set correct peerID
-        interestInPieces.put(peerID, Boolean.FALSE);
+        interestInPieces.put(myID, Boolean.FALSE);
     }
 
 
