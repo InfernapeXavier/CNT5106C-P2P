@@ -15,7 +15,7 @@ public class Bitfield {
         deactivateAll();
     }
 
-    public synchronized void setBit(byte[] bytes) {
+    public synchronized void setBits(byte[] bytes) {
         downloaded = 0;
         for (int i = 0; i < pieces; i++) {
             if (((i%8 >> 1) & bytes[i/8]) != 0) {
@@ -34,11 +34,10 @@ public class Bitfield {
     }
 
     public synchronized byte[] asBytes() {
-        switch (pieces%8) {
-            case 0:
-                bytes = pieces/8;
-            default:
-                bytes = pieces/8 + 1;
+        if (pieces % 8 == 0) {
+            bytes = pieces / 8;
+        } else {
+            bytes = pieces / 8 + 1;
         }
         byte[] asBytes = new byte[bytes];
         initializeBytes(asBytes, bytes);
@@ -57,6 +56,8 @@ public class Bitfield {
             setFinished();
         }
     }
+
+    public synchronized boolean checkBitfield(int index) { return bitfield[index]; }
 
     public synchronized int interested(Bitfield diffBitfield) {
         int notInterested = -1;
@@ -78,7 +79,7 @@ public class Bitfield {
         }
     }
 
-    public synchronized  void deactivateAll() {
+    public synchronized void deactivateAll() {
         for (int i = 0; i < pieces; i++) {
             if (bitfield[i]) { //== true
                 bitfield[i] = false;
@@ -98,4 +99,5 @@ public class Bitfield {
     public synchronized boolean finished() {return finished;}
 
     public synchronized void setFinished() {finished = true;}
+
 }

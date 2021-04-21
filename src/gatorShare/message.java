@@ -7,6 +7,9 @@ import java.io.Serializable;
 
 public class Message implements Serializable {
 
+    public Message(messageType INTERESTED) {
+    }
+
     enum messageType {
         CHOKE(0),
         UNCHOKE(1),
@@ -53,6 +56,22 @@ public class Message implements Serializable {
 
     public byte[] getPayload() {return this.messagePayload; }
 
+    public void setPayload(byte[] payload) {this.messagePayload = payload; }
+
+    private messageType returnType(int value) {
+        return switch (value) {
+            case 0 -> messageType.CHOKE;
+            case 1 -> messageType.UNCHOKE;
+            case 2 -> messageType.INTERESTED;
+            case 3 -> messageType.NOT_INTERESTED;
+            case 4 -> messageType.HAVE;
+            case 5 -> messageType.BITFIELD;
+            case 6 -> messageType.REQUEST;
+            case 7 -> messageType.PIECE;
+            default -> throw new IllegalStateException("Unexpected value: " + value);
+        };
+    }
+
     public void send (OutputStream out) throws IOException {
         out.write((byte)(messagePayload.length + 4));
         out.write((byte)type.value);
@@ -83,14 +102,28 @@ public class Message implements Serializable {
             i += in.read(payload, i, len-4-i);
         }
 
+        this.length = len;
+        this.type = returnType(tpe);
+        this.messagePayload = payload;
 
     }
 
-    private int toInt(byte[] bytes){
+    public int toInt(byte[] bytes){
         return ((bytes[0] & 0xFF) << 24) |
                 ((bytes[1] & 0xFF) << 16) |
                 ((bytes[2] & 0xFF) << 8) |
                 ((bytes[3] & 0xFF) << 0);
+    }
+
+    public byte[] toByte(int num) {
+        byte[] result = new byte[4];
+
+        result[0] = (byte) (num >> 24);
+        result[1] = (byte) (num >> 16);
+        result[2] = (byte) (num >> 8);
+        result[3] = (byte) (num >> 0);
+
+        return result;
     }
 
 }

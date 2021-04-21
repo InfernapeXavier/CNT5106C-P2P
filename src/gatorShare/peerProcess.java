@@ -1,9 +1,14 @@
 package gatorShare;
 
+import java.awt.TrayIcon.MessageType;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.sql.Array;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Hashtable;
 
 public class peerProcess implements Runnable{
 
@@ -15,17 +20,22 @@ public class peerProcess implements Runnable{
     private int numberOfNeighbors;
     private Neighbors[] neighbors;
     private Manager manager;
-
+    private HashMap<Integer, Boolean> interestInPieces;
 
     public peerProcess(int ID) throws IOException {
 
-        this.myID = myID;
+        this.myID = ID;
         this.info = new Info("Common.cfg", "PeerInfo.cfg");
         this.myLogger = new MyLogger(myID);
         this.bitfield = new Bitfield(info.getPieces());
         this.numberOfNeighbors = info.getNeighbors();
-        neighbors = new Neighbors[numberOfNeighbors];
+        this.neighbors = new Neighbors[numberOfNeighbors];
         this.manager = new Manager(this.myID, this.info);
+        this.interestInPieces = new HashMap<Integer, Boolean>();
+
+        for (int i=0; i<info.getNeighbors(); ++i) {
+               this.interestInPieces.put(i, false);
+        }
     }
 
     public void initPeer(Neighbors neighbors) throws Exception {
@@ -45,7 +55,7 @@ public class peerProcess implements Runnable{
         bitfieldMessage.send(socket.getOutputStream());
         bitfieldMessage.receive(socket.getInputStream());
         Bitfield receivedBitfield = new Bitfield(info.getPieces());
-        receivedBitfield.setBit(bitfieldMessage.getPayload());
+        receivedBitfield.setBits(bitfieldMessage.getPayload());
         neighbors.setBitfield(receivedBitfield);
 
         Message interestMessage = new Message(Message.messageType.INTERESTED, null);
@@ -125,17 +135,92 @@ public class peerProcess implements Runnable{
 
             System.out.println("Does this ever trigger?");
 
-
-
-
             /*
             TO-DO: handle choking/unchoking, upload/download process, and finishing up
              */
 
 
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void checkMessage(Message message) throws IOException {
+
+        switch (message.getMessageType()) {
+            case Message.messageType.CHOKE -> chokePeer(message);
+            case Message.messageType.UNCHOKE -> unchokePeer(message);
+            case Message.messageType.INTERESTED -> handleInterested(message);
+            case Message.messageType.NOT_INTERESTED -> handleNotInterested(message);
+            case Message.messageType.HAVE -> handleHave(message);
+            case Message.messageType.REQUEST -> handleRequest(message);
+            case Message.messageType.PIECE -> handlePiece(message);
+        }
+    }
+
+    public void handleUnchoke(Message message) throws  IOException {
+
+        Message requestMessage = new Message(Message.messageType.REQUEST, null);
+
+        // neighbor = get neighbor
+        int requestIndex = bitfield.interested(neighbor.bitfield);
+        requestMessage.setPayload(requestMessage.toByte(requestIndex));
+
+        // send to neighbor
+
+    }
+
+    public void handleInterested(Message message) throws  IOException {
+
+        // Set correct peerID
+        interestInPieces.put(peerID, Boolean.TRUE);
+    }
+    public void handleNotInterested(Message message) throws  IOException {
+
+        // Set correct peerID
+        interestInPieces.put(peerID, Boolean.FALSE);
+    }
+
+
+    public void handleHave(Message message) throws  IOException {
+
+        byte[] idx = new byte[4];
+        idx = Arrays.copyOfRange(message.getPayload(), 0, 5);
+        int pieceIndex = message.toInt(idx);
+
+        // select correct neighbor and do neighbor.bitfield.activate(pieceIndex)
+        Message interestMessage = new Message(Message.messageType.INTERESTED, null);
+        if (! bitfield.checkBitfield(pieceIndex)) {
+            interestMessage.setType(Message.messageType.NOT_INTERESTED);
+        }
+
+        // Select correct peer and send
+
+    }
+
+    public void handleRequest(Message message) throws IOException {
+        byte[] idx = new byte[4];
+        idx = Arrays.copyOfRange(message.getPayload(), 0, 5);
+        int pieceIndex = message.toInt(idx);
+
+        byte[] piecePayload = manager.fetchPieceFromFile(pieceIndex);
+        Message pieceMessage = new Message(Message.messageType.PIECE, piecePayload);
+
+        // Select correct peer and send
+
+    }
+
+    public void handlePiece(Message message) throws IOException {
+        byte[] idx = new byte[4];
+        idx = Arrays.copyOfRange(message.getPayload(), 0, 5);
+        byte[] piecePayload = Arrays.copyOfRange(message.getPayload(), 5, message.getMessageLength());
+        int pieceIndex = message.toInt(idx);
+
+        manager.writePieceToFile(pieceIndex, piecePayload);
+        bitfield.activate(pieceIndex);
+        // TODO Log
     }
 
 
